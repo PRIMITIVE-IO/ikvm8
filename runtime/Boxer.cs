@@ -205,7 +205,7 @@ namespace IKVM.Internal
 			}
 			else
 			{
-				throw new InvalidOperationException();
+				//throw new InvalidOperationException();
 			}
 		}
 	}
