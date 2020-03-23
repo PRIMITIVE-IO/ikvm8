@@ -206,10 +206,31 @@ namespace IKVM.Internal
 					return false;
 				}
 
-				if (System.IO.Path.GetDirectoryName(asm.Location) == System.IO.Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory))
+				// On Android, unless a check is performed, getting the BaseDirectory of the app throws an exception:
+				//ArgumentException: The specified path is not of a legal form (empty).
+				// at System.IO.Path.InsecureGetFullPath (System.String path) [0x00025] in <437ba245d8404784b9fbab9b439ac908>:0
+				// at System.IO.Path.GetFullPath (System.String path) [0x00000] in <437ba245d8404784b9fbab9b439ac908>:0
+				// at System.AppDomainSetup.GetAppBase (System.String appBase) [0x00041] in <437ba245d8404784b9fbab9b439ac908>:0
+				// at System.AppDomainSetup.get_ApplicationBase () [0x00000] in <437ba245d8404784b9fbab9b439ac908>:0
+				// at System.AppDomain.get_BaseDirectory () [0x00006] in <437ba245d8404784b9fbab9b439ac908>:0
+				// at (wrapper remoting-invoke-with-check) System.AppDomain.get_BaseDirectory()
+				try
 				{
-					// this is an optimization for the common case were the assembly was loaded from the app directory
-					return true;
+					if (!string.IsNullOrEmpty(asm.Location) &&
+					    !string.IsNullOrEmpty(AppDomain.CurrentDomain.BaseDirectory) &&
+					    !asm.Location.Equals("empty") && !AppDomain.CurrentDomain.BaseDirectory.Equals("empty"))
+					{
+						if (System.IO.Path.GetDirectoryName(asm.Location) ==
+						    System.IO.Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory))
+						{
+							// this is an optimization for the common case were the assembly was loaded from the app directory
+							return true;
+						}
+					}
+				}
+				catch (ArgumentException e)
+				{
+					//
 				}
 
 				try
