@@ -220,6 +220,7 @@
                 <include name="${ReferencePath}/mscorlib.dll" />
                 <include name="${ReferencePath}/System.dll" />
                 <include name="${ReferencePath}/System.Configuration.dll" />
+				<include name="..\packages\SharpZipLib.1.2.0\lib\net45\ICSharpCode.SharpZipLib.dll" />
             </references>
         </csc>
         <copy file="IKVM.Runtime.dll" todir="../bin" />

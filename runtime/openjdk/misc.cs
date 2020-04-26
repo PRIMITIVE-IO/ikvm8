@@ -29,6 +29,7 @@ using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using ICSharpCode.SharpZipLib.Zip;
 using IKVM.Internal;
 
 static class Java_ikvm_runtime_Startup
@@ -100,25 +101,25 @@ static class Java_java_util_zip_ClassStubZipEntry
 	public static void expandIkvmClasses(object _zipFile, object _entries)
 	{
 #if !FIRST_PASS
-		java.util.zip.ZipFile zipFile = (java.util.zip.ZipFile)_zipFile;
+		ZipFile zipFile = (ZipFile)_zipFile;
 		java.util.LinkedHashMap entries = (java.util.LinkedHashMap)_entries;
 
 		try
 		{
-			string path = zipFile.getName();
-			java.util.zip.ZipEntry entry = (java.util.zip.ZipEntry)entries.get(JVM.JarClassList);
+			string path = zipFile.Name;
+			ZipEntry entry = (ZipEntry)entries.get(JVM.JarClassList);
 			if (entry != null && VirtualFileSystem.IsVirtualFS(path))
 			{
 				using (VirtualFileSystem.ZipEntryStream stream = new VirtualFileSystem.ZipEntryStream(zipFile, entry))
 				{
-					entries.remove(entry.name);
+					entries.remove(entry.Name);
 					BinaryReader br = new BinaryReader(stream);
 					int count = br.ReadInt32();
 					for (int i = 0; i < count; i++)
 					{
 						java.util.zip.ClassStubZipEntry classEntry = new java.util.zip.ClassStubZipEntry(path, br.ReadString());
 						classEntry.setMethod(java.util.zip.ClassStubZipEntry.STORED);
-						classEntry.setTime(entry.getTime());
+						classEntry.setTime(entry.DosTime);
 						entries.put(classEntry.name, classEntry);
 					}
 				}

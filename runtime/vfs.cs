@@ -22,10 +22,12 @@
   
 */
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using ICSharpCode.SharpZipLib.Zip;
 
 namespace IKVM.Internal
 {
@@ -639,12 +641,12 @@ namespace IKVM.Internal
 			}
 		}
 
-		private sealed class VfsZipEntry : VfsFile
+			private sealed class VfsZipEntry : VfsFile
 		{
-			private readonly java.util.zip.ZipFile zipFile;
-			private readonly java.util.zip.ZipEntry entry;
+			private readonly ZipFile zipFile;
+			private readonly ZipEntry entry;
 
-			internal VfsZipEntry(java.util.zip.ZipFile zipFile, java.util.zip.ZipEntry entry)
+			internal VfsZipEntry(ZipFile zipFile, ZipEntry entry)
 			{
 				this.zipFile = zipFile;
 				this.entry = entry;
@@ -652,7 +654,7 @@ namespace IKVM.Internal
 
 			internal override long Size
 			{
-				get { return entry.getSize(); }
+				get { return entry.Size; }
 			}
 
 			internal override System.IO.Stream Open()
@@ -784,11 +786,11 @@ namespace IKVM.Internal
 
 			// this is a weird loop back, the vfs.zip resource is loaded from vfs,
 			// because that's the easiest way to construct a ZipFile from a Stream.
-			java.util.zip.ZipFile zf = new java.util.zip.ZipFile(RootPath + "vfs.zip");
-			java.util.Enumeration e = zf.entries();
-			while (e.hasMoreElements())
+			ZipFile zf = new ZipFile(RootPath + "vfs.zip");
+			IEnumerator e = zf.GetEnumerator();
+			while (e.MoveNext())
 			{
-				AddZipEntry(zf, root, (java.util.zip.ZipEntry)e.nextElement());
+				AddZipEntry(zf, root, (ZipEntry)e.Current);
 			}
 
 			// make "lib/security/local_policy.jar" point to "lib/security/US_export_policy.jar"
@@ -804,13 +806,13 @@ namespace IKVM.Internal
 			dir.Add(java.lang.System.mapLibraryName(name), VfsDummyFile.Instance);
 		}
 
-		private static void AddZipEntry(java.util.zip.ZipFile zf, VfsDirectory root, java.util.zip.ZipEntry entry)
+		private static void AddZipEntry(ZipFile zf, VfsDirectory root, ZipEntry entry)
 		{
-			if (entry.isDirectory())
+			if (entry.IsDirectory)
 			{
 				return;
 			}
-			string[] path = entry.getName().Split('/');
+			string[] path = entry.Name.Split('/');
 			VfsDirectory dir = root;
 			for (int i = 0; i < path.Length - 1; i++)
 			{
@@ -844,16 +846,16 @@ namespace IKVM.Internal
 
 		internal sealed class ZipEntryStream : System.IO.Stream
 		{
-			private readonly java.util.zip.ZipFile zipFile;
-			private readonly java.util.zip.ZipEntry entry;
+			private readonly ZipFile zipFile;
+			private readonly ZipEntry entry;
 			private java.io.InputStream inp;
 			private long position;
 
-			internal ZipEntryStream(java.util.zip.ZipFile zipFile, java.util.zip.ZipEntry entry)
+			internal ZipEntryStream(ZipFile zipFile, ZipEntry entry)
 			{
 				this.zipFile = zipFile;
 				this.entry = entry;
-				inp = zipFile.getInputStream(entry);
+				inp = new ikvm.io.InputStreamWrapper(zipFile.GetInputStream(entry));
 			}
 
 			public override bool CanRead
@@ -873,7 +875,7 @@ namespace IKVM.Internal
 
 			public override long Length
 			{
-				get { return entry.getSize(); }
+				get { return entry.Size; }
 			}
 
 			public override int Read(byte[] buffer, int offset, int count)
@@ -912,7 +914,7 @@ namespace IKVM.Internal
 						}
 						position = 0;
 						inp.close();
-						inp = zipFile.getInputStream(entry);
+						inp = new ikvm.io.InputStreamWrapper(zipFile.GetInputStream(entry));
 					}
 					long skip = value - position;
 					while (skip > 0)
@@ -920,7 +922,7 @@ namespace IKVM.Internal
 						long skipped = inp.skip(skip);
 						if (skipped == 0)
 						{
-							if (position != entry.getSize())
+							if (position != entry.Size)
 							{
 								throw new System.IO.IOException("skip failed");
 							}
@@ -949,11 +951,12 @@ namespace IKVM.Internal
 						Position += offset;
 						break;
 					case System.IO.SeekOrigin.End:
-						Position = entry.getSize() + offset;
+						Position = entry.Size + offset;
 						break;
 				}
 				return position;
 			}
+
 
 			public override void Write(byte[] buffer, int offset, int count)
 			{
